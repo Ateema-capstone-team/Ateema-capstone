@@ -14,9 +14,38 @@ from ateema.pricing import apply_discounts, get_effective_unit_price, first_know
 
 BASE_DIR = Path(__file__).resolve()
 project_root = BASE_DIR.parent.parent
+
+# --- Ateema Logo Building ---
+logo_wide_path = project_root / "Logo" / "logo_wide.jpg"     
+
+st.set_page_config(
+    page_title="Ateema – Proposal Builder", 
+    page_icon="🧭", 
+    layout="wide"
+)
+st.markdown("""
+    <style>
+        .block-container {
+            padding-top: 1rem;
+            padding-bottom: 0rem;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+if logo_wide_path.exists():
+    # [1, 3, 1]  -> Logo will occupy 60% of the first row
+    # [1, 2, 1]  -> Logo will occupy 50%...
+    left_co, cent_co, last_co = st.columns([1, 2, 1])
+
+    with cent_co:
+        st.image(str(logo_wide_path), use_container_width=True)
+else:
+    st.title("Ateema – Proposal Builder")
+
 # ---------- Page ----------
 st.set_page_config(page_title="Ateema – Proposal Builder", page_icon="🧭", layout="wide")
 st.title("Ateema – Proposal Builder")
+
 
 # ---------- Sidebar (old layout restored) ----------
 
@@ -491,41 +520,55 @@ else:
 
     st.markdown("### Similar Clients")
     k_sim = st.slider("How many similar clients?", 1, 10, 5, 1)
+
+    # Dazhou 12/1 similar clients
     if st.button("Generate similar clients", type="secondary"):
         try:
-            from partner.client_to_product_final import similar_clients_json
+            with st.spinner("Analyzing similar clients..."):
+                from partner.client_to_product_final import similar_clients_json
 
-            new_client_payload = {
-                "Business Name": client_name,
-                "Business Type": business_type,
-                "Focus": focus_text,
-                "Market Target": market_text,
-                "Business Description": "",
-            }
-            sc = similar_clients_json(new_client_payload, k=k_sim)
-            st.session_state["_payload_similar"] = sc["similar_clients"]
-            lines = [
-                f"{d['name']} | {', '.join(d.get('purchased', []))} | {d.get('notes', '')}"
-                for d in sc["similar_clients"]
-            ]
-            st.code("\n".join(lines), language="text")
+                new_client_payload = {
+                    "Business Name": client_name,
+                    "Business Type": business_type,
+                    "Focus": focus_text,
+                    "Market Target": market_text,
+                    "Business Description": "",
+                }
+                sc = similar_clients_json(new_client_payload, k=k_sim)
 
-            # Gabri Award
-            # helper:  seed multiselect
-            if st.button("Use products from similar clients"):
-                picked = set()
-                for d in sc["similar_clients"]:
-                    for p in d.get("purchased", []):
-                        # Only real product besides of Awards
-                        if p in all_names:
-                            picked.add(p)
-                chosen = st.multiselect(
-                    "Choose candidate products",
-                    options=extended_options,
-                    default=sorted(picked),
-                )
+                st.session_state["_payload_similar"] = sc["similar_clients"]
+                st.rerun()
+
+                # Gabri Award
+                # helper:  seed multiselect
+                if st.button("Use products from similar clients"):
+                    picked = set()
+                    for d in sc["similar_clients"]:
+                        for p in d.get("purchased", []):
+                            # Only real product besides of Awards
+                            if p in all_names:
+                                picked.add(p)
+                    chosen = st.multiselect(
+                        "Choose candidate products",
+                        options=extended_options,
+                        default=sorted(picked),
+                    )
         except Exception as e:
             st.error(f"Failed to generate similar clients: {e}")
+
+    if "_payload_similar" in st.session_state:
+        similar_data = st.session_state["_payload_similar"]
+        st.markdown("---")
+        st.markdown("#### Similar Clients Analysis")    
+        lines = [
+                f"{d['name']} | {', '.join(d.get('purchased', []))} | {d.get('notes', '')}"
+                for d in similar_data
+            ]
+        st.code("\n".join(lines), language="text")
+        if st.button("Close Analysis"):
+            del st.session_state["_payload_similar"]
+            st.rerun()
+
 
     # Candidate products – start EMPTY
     chosen = st.multiselect("Choose candidate products", options=extended_options, default=[])

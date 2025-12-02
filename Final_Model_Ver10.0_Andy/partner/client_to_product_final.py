@@ -10,9 +10,17 @@ from sentence_transformers import SentenceTransformer
 from typing import Any, Dict, List, Tuple
 
 # ==== paths (edit for your machine) ====
-INDEX_PATH = Path(r"C:\Users\fanmu\PycharmProjects\AteemaRag\Data\ClientToProductData\customers_faiss.index")
-MAP_PARQUET = Path(r"C:\Users\fanmu\PycharmProjects\AteemaRag\Data\ClientToProductData\customers_mapping_deduped.parquet")
-META_JSON   = Path(r"C:\Users\fanmu\PycharmProjects\AteemaRag\Data\ClientToProductData\index_meta.json")
+BASE_DIR =  Path(__file__).resolve()
+project_root = BASE_DIR.parent.parent.parent
+
+DATA_DIR = project_root / "Data" / "ClientToProductData"
+INDEX_PATH  = DATA_DIR / "customers_faiss.index"
+MAP_PARQUET = DATA_DIR / "customers_mapping_deduped.parquet"
+META_JSON   = DATA_DIR / "index_meta.json"
+
+if not INDEX_PATH.exists():
+    print(f"Warning: Index file not found at {INDEX_PATH}, trying alternative...")
+    
 # -------- Load model & data --------
 meta = json.loads(META_JSON.read_text(encoding="utf-8"))
 model_name = meta.get("model_name", "BAAI/bge-small-en-v1.5")
